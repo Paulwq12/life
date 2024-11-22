@@ -7489,25 +7489,37 @@ let cap = `Title: ${video.title}\nViews: ${video.views}\nDuration: ${video.times
 
 myFFmpeg.setFfmpegPath(ffmpegStatic);
 
-        case 'ytdownload': {
-            myFFmpeg.setFfmpegPath(ffmpegStatic);
+      case 'ytdownload': {
+  ffmpeg.setFfmpegPath(ffmpegStatic);
+
   const url = text;
-  if (!ytDownloader.validateURL(url)) return replygcxeon("Invalid YouTube URL. Please try again.");
+
+  if (!ytDownloader.validateURL(url)) {
+    replygcxeon("Invalid YouTube URL. Please try again.");
+    return;
+  }
 
   try {
-    const info = await ytDownloader.getInfo(url);
+    // Fetch video info
+    const info = await ytDownloader.getInfo(url, {
+      requestOptions: {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36',
+        },
+      },
+    });
+
     const videoTitle = info.videoDetails.title;
 
     // Set up separate streams for video and audio
     const videoStream = ytDownloader(url, { quality: '135' }); // 480p video only
     const audioStream = ytDownloader(url, { quality: '140' }); // audio only
 
-    // Define temporary file paths in 'tmp/' directory
+    // Define temporary file paths
     const videoFile = './tmp/temp_video.mp4';
     const audioFile = './tmp/temp_audio.m4a';
     const outputFile = './tmp/temp_output.mp4';
 
-    // Function to handle downloading completion of both video and audio
     const downloadCompleted = new Promise((resolve, reject) => {
       let videoDone = false;
       let audioDone = false;
@@ -7541,10 +7553,9 @@ myFFmpeg.setFfmpegPath(ffmpegStatic);
       });
     });
 
-    // Wait for both downloads to complete before starting FFmpeg
     await downloadCompleted;
 
-    // Check that both files exist before starting FFmpeg
+    // Verify downloaded files exist
     if (!fileSys.existsSync(videoFile) || !fileSys.existsSync(audioFile)) {
       console.error("Error: One or both of the temp files do not exist.");
       replygcxeon("Failed to download video and audio. Please try again.");
@@ -7553,47 +7564,54 @@ myFFmpeg.setFfmpegPath(ffmpegStatic);
 
     console.log("Both video and audio files are ready. Starting FFmpeg merge...");
 
+    ffmpeg(videoFile)
+      .input(audioFile)
+      .output(outputFile)
+      .videoCodec('copy')
+      .audioCodec('copy')
+      .on('start', (commandLine) => {
+        console.log("FFmpeg command:", commandLine);
+      })
+      .on('end', async () => {
+        console.log("FFmpeg merge complete.");
 
-myFFmpeg(videoFile)
-  .input(audioFile)
-  .output(outputFile)
-  .videoCodec('copy') // Copy video codec directly to avoid re-encoding
-  .audioCodec('copy') // Copy audio codec if it's compatible (or use 'aac' if issues arise)
-  .on('start', (commandLine) => {
-    console.log("FFmpeg command:", commandLine); // Debug command used
-  })
-  .on('end', async () => {
-    console.log("FFmpeg merge complete.");
+        if (!fileSys.existsSync(outputFile)) {
+          console.error("FFmpeg failed to create the output file.");
+          replygcxeon("An error occurred while merging video and audio. Please try again.");
+          return;
+        }
 
-    if (!fileSys.existsSync(outputFile)) {
-      console.error("FFmpeg failed to create the output file.");
-      replygcxeon("An error occurred while merging video and audio. Please try again.");
-      return;
-    }
+        const videoBuffer = fileSys.readFileSync(outputFile);
+        await XeonBotInc.sendMessage(m.chat, {
+          video: videoBuffer,
+          mimeType: 'video/mp4',
+          caption: `Here is your video: ${videoTitle}`,
+        }, { quoted: m });
 
-    const videoBuffer = fileSys.readFileSync(outputFile);
-    await XeonBotInc.sendMessage(m.chat, { 
-      video: videoBuffer,
-      mimeType: 'video/mp4',
-      caption: `Here is your video: ${videoTitle}`,
-    }, { quoted: m });
+        // Clean up temporary files
+        fileSys.unlinkSync(videoFile);
+        fileSys.unlinkSync(audioFile);
+        fileSys.unlinkSync(outputFile);
+        console.log("Temporary files cleaned up.");
+      })
+      .on('error', (error) => {
+        console.error("FFmpeg Error:", error);
+        replygcxeon("An error occurred while merging video and audio. Please try again.");
+      })
+      .run();
 
-    fileSys.unlinkSync(videoFile);
-    fileSys.unlinkSync(audioFile);
-    fileSys.unlinkSync(outputFile);
-    console.log("Temporary files cleaned up.");
-  })
-  .on('error', (error) => {
-    console.error("FFmpeg Error:", error);
-    replygcxeon("An error occurred while merging video and audio. Please try again.");
-  })
-  .run();
   } catch (error) {
-    console.error("Error downloading video:", error);
-    replygcxeon("An error occurred while downloading the video. Please try again.");
+    if (error.message.includes('Sign in to confirm')) {
+      console.error("YouTube CAPTCHA challenge detected.");
+      replygcxeon("Error: CAPTCHA detected. Unable to download video.");
+    } else {
+      console.error("Error downloading video:", error);
+      replygcxeon("An error occurred while downloading the video. Please try again.");
+    }
   }
   break;
 }
+
 break
 case 'ytsubtitle': {
   const url = text;
