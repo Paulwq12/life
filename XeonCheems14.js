@@ -7489,111 +7489,144 @@ let cap = `Title: ${video.title}\nViews: ${video.views}\nDuration: ${video.times
 
 myFFmpeg.setFfmpegPath(ffmpegStatic);
 
-        case 'ytdownload': {
-            myFFmpeg.setFfmpegPath(ffmpegStatic);
-  const url = text;
-  if (!ytDownloader.validateURL(url)) return replygcxeon("Invalid YouTube URL. Please try again.");
+case 'ytdownload': {
+    myFFmpeg.setFfmpegPath(ffmpegStatic);
+    const url = text;
 
-  try {
-    const info = await ytDownloader.getInfo(url);
-    const videoTitle = info.videoDetails.title;
+    // Validate the YouTube URL
+    if (!ytDownloader.validateURL(url)) return replygcxeon("Invalid YouTube URL. Please try again.");
 
-    // Set up separate streams for video and audio
-    const videoStream = ytDownloader(url, { quality: '135' }); // 480p video only
-    const audioStream = ytDownloader(url, { quality: '140' }); // audio only
+    try {
+        // Define the agent options
+        const agentOptions = {
+            pipelining: 5, // Use up to 5 parallel requests
+        };
 
-    // Define temporary file paths in 'tmp/' directory
-    const videoFile = './tmp/temp_video.mp4';
-    const audioFile = './tmp/temp_audio.m4a';
-    const outputFile = './tmp/temp_output.mp4';
+        // Mimic browser
+        const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36';
 
-    // Function to handle downloading completion of both video and audio
-    const downloadCompleted = new Promise((resolve, reject) => {
-      let videoDone = false;
-      let audioDone = false;
+        // Create an agent using the cookies and pipelining options
+        const agentWithCookies = ytDownloader.createAgent(agentOptions, {
+            headers: {
+                'User-Agent': userAgent,
+                Cookie: fs.existsSync('./src/cookies.json') ? fs.readFileSync('./src/cookies.json', 'utf8') : '',
+            },
+        });
 
-      const checkCompletion = () => {
-        if (videoDone && audioDone) resolve();
-      };
+        // Attempt to fetch video information with the custom agent
+        let info;
+        try {
+            info = await ytDownloader.getInfo(url, { agent: agentWithCookies });
+        } catch (error) {
+            console.error("Cookie-based download failed, switching to random IP:", error);
+            const randomIPAgent = ytDownloader.createAgent(agentOptions, {
+                localAddress: getRandomIPv6('2001:2::/48'),
+            });
+            info = await ytDownloader.getInfo(url, { agent: randomIPAgent });
+        }
 
-      // Video stream
-      const videoFileStream = videoStream.pipe(fileSys.createWriteStream(videoFile));
-      videoFileStream.on('finish', () => {
-        console.log("Video download complete.");
-        videoDone = true;
-        checkCompletion();
-      });
-      videoStream.on('error', (error) => {
-        console.error("Video Stream Error:", error);
-        reject(error);
-      });
+        const videoTitle = info.videoDetails.title;
 
-      // Audio stream
-      const audioFileStream = audioStream.pipe(fileSys.createWriteStream(audioFile));
-      audioFileStream.on('finish', () => {
-        console.log("Audio download complete.");
-        audioDone = true;
-        checkCompletion();
-      });
-      audioStream.on('error', (error) => {
-        console.error("Audio Stream Error:", error);
-        reject(error);
-      });
-    });
+        // Set up separate streams for video and audio
+        const videoStream = ytDownloader(url, { quality: '135', agent: agentWithCookies }); // 480p video only
+        const audioStream = ytDownloader(url, { quality: '140', agent: agentWithCookies }); // audio only
 
-    // Wait for both downloads to complete before starting FFmpeg
-    await downloadCompleted;
+        // Define temporary file paths in 'tmp/' directory
+        const videoFile = './tmp/temp_video.mp4';
+        const audioFile = './tmp/temp_audio.m4a';
+        const outputFile = './tmp/temp_output.mp4';
 
-    // Check that both files exist before starting FFmpeg
-    if (!fileSys.existsSync(videoFile) || !fileSys.existsSync(audioFile)) {
-      console.error("Error: One or both of the temp files do not exist.");
-      replygcxeon("Failed to download video and audio. Please try again.");
-      return;
+        // Function to handle downloading completion of both video and audio
+        const downloadCompleted = new Promise((resolve, reject) => {
+            let videoDone = false;
+            let audioDone = false;
+
+            const checkCompletion = () => {
+                if (videoDone && audioDone) resolve();
+            };
+
+            // Video stream
+            const videoFileStream = videoStream.pipe(fileSys.createWriteStream(videoFile));
+            videoFileStream.on('finish', () => {
+                console.log("Video download complete.");
+                videoDone = true;
+                checkCompletion();
+            });
+            videoStream.on('error', (error) => {
+                console.error("Video Stream Error:", error);
+                reject(error);
+            });
+
+            // Audio stream
+            const audioFileStream = audioStream.pipe(fileSys.createWriteStream(audioFile));
+            audioFileStream.on('finish', () => {
+                console.log("Audio download complete.");
+                audioDone = true;
+                checkCompletion();
+            });
+            audioStream.on('error', (error) => {
+                console.error("Audio Stream Error:", error);
+                reject(error);
+            });
+        });
+
+        // Wait for both downloads to complete before starting FFmpeg
+        await downloadCompleted;
+
+        // Check that both files exist before starting FFmpeg
+        if (!fileSys.existsSync(videoFile) || !fileSys.existsSync(audioFile)) {
+            console.error("Error: One or both of the temp files do not exist.");
+            replygcxeon("Failed to download video and audio. Please try again.");
+            return;
+        }
+
+        console.log("Both video and audio files are ready. Starting FFmpeg merge...");
+
+        myFFmpeg(videoFile)
+            .input(audioFile)
+            .output(outputFile)
+            .videoCodec('copy') // Copy video codec directly to avoid re-encoding
+            .audioCodec('copy') // Copy audio codec if it's compatible (or use 'aac' if issues arise)
+            .on('start', (commandLine) => {
+                console.log("FFmpeg command:", commandLine); // Debug command used
+            })
+            .on('end', async () => {
+                console.log("FFmpeg merge complete.");
+
+                if (!fileSys.existsSync(outputFile)) {
+                    console.error("FFmpeg failed to create the output file.");
+                    replygcxeon("An error occurred while merging video and audio. Please try again.");
+                    return;
+                }
+
+                const videoBuffer = fileSys.readFileSync(outputFile);
+                await XeonBotInc.sendMessage(
+                    m.chat,
+                    {
+                        video: videoBuffer,
+                        mimeType: 'video/mp4',
+                        caption: `Here is your video: ${videoTitle}`,
+                    },
+                    { quoted: m }
+                );
+
+                fileSys.unlinkSync(videoFile);
+                fileSys.unlinkSync(audioFile);
+                fileSys.unlinkSync(outputFile);
+                console.log("Temporary files cleaned up.");
+            })
+            .on('error', (error) => {
+                console.error("FFmpeg Error:", error);
+                replygcxeon("An error occurred while merging video and audio. Please try again.");
+            })
+            .run();
+    } catch (error) {
+        console.error("Error downloading video:", error);
+        replygcxeon("An error occurred while downloading the video. Please try again.");
     }
-
-    console.log("Both video and audio files are ready. Starting FFmpeg merge...");
-
-
-myFFmpeg(videoFile)
-  .input(audioFile)
-  .output(outputFile)
-  .videoCodec('copy') // Copy video codec directly to avoid re-encoding
-  .audioCodec('copy') // Copy audio codec if it's compatible (or use 'aac' if issues arise)
-  .on('start', (commandLine) => {
-    console.log("FFmpeg command:", commandLine); // Debug command used
-  })
-  .on('end', async () => {
-    console.log("FFmpeg merge complete.");
-
-    if (!fileSys.existsSync(outputFile)) {
-      console.error("FFmpeg failed to create the output file.");
-      replygcxeon("An error occurred while merging video and audio. Please try again.");
-      return;
-    }
-
-    const videoBuffer = fileSys.readFileSync(outputFile);
-    await XeonBotInc.sendMessage(m.chat, { 
-      video: videoBuffer,
-      mimeType: 'video/mp4',
-      caption: `Here is your video: ${videoTitle}`,
-    }, { quoted: m });
-
-    fileSys.unlinkSync(videoFile);
-    fileSys.unlinkSync(audioFile);
-    fileSys.unlinkSync(outputFile);
-    console.log("Temporary files cleaned up.");
-  })
-  .on('error', (error) => {
-    console.error("FFmpeg Error:", error);
-    replygcxeon("An error occurred while merging video and audio. Please try again.");
-  })
-  .run();
-  } catch (error) {
-    console.error("Error downloading video:", error);
-    replygcxeon("An error occurred while downloading the video. Please try again.");
-  }
-  break;
+    break;
 }
+
 break
 case 'ytsubtitle': {
   const url = text;
