@@ -7508,7 +7508,7 @@ case 'ytdownload': {
 // Load cookies from JSON file
 	    let cookies;
 try {
-    cookies = JSON.parse(fs.readFileSync('/src/cookies.json', 'utf8')); // Load cookies
+    cookies = JSON.parse(fs.readFileSync('./src/cookies.json', 'utf8')); // Load cookies
     if (!Array.isArray(cookies)) throw new Error("Cookies must be an array");
 } catch (error) {
     console.error("Error loading cookies:", error);
