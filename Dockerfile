@@ -1,5 +1,5 @@
-# Use a stable Node.js image
-FROM node:latest
+# Use the desired Node.js 20 image from GitHub Container Registry
+FROM ghcr.io/pakervcp/yolks:nodejs-20
 
 # Update package manager and install required dependencies
 RUN apt-get update && \
