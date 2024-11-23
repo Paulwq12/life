@@ -1,5 +1,5 @@
 # Use the desired Node.js 20 image from GitHub Container Registry
-FROM ghcr.io/pakervcp/yolks:nodejs-20
+FROM node:lts-buster
 
 # Update package manager and install required dependencies
 RUN apt-get update && \
