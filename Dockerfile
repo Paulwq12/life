@@ -1,5 +1,5 @@
 # Use a stable Node.js image
-FROM node:lts-buster
+FROM node:latest
 
 # Update package manager and install required dependencies
 RUN apt-get update && \
