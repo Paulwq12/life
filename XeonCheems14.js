@@ -7502,14 +7502,23 @@ case 'ytdownload': {
             pipelining: 5, // Use up to 5 parallel requests
         };
 
+
         // Mimic browser
         const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36';
-
+// Load cookies from JSON file
+	    let cookies;
+try {
+    cookies = JSON.parse(fs.readFileSync('/src/cookies.json', 'utf8')); // Load cookies
+    if (!Array.isArray(cookies)) throw new Error("Cookies must be an array");
+} catch (error) {
+    console.error("Error loading cookies:", error);
+    cookies = []; // Use an empty array if loading fails
+}
         // Create an agent using the cookies and pipelining options
         const agentWithCookies = ytDownloader.createAgent(agentOptions, {
             headers: {
                 'User-Agent': userAgent,
-                Cookie: fs.existsSync('./src/cookies.json') ? fs.readFileSync('./src/cookies.json', 'utf8') : '',
+                Cookie: cookies,
             },
         });
 
