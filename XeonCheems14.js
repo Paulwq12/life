@@ -7489,7 +7489,7 @@ let cap = `Title: ${video.title}\nViews: ${video.views}\nDuration: ${video.times
 
 myFFmpeg.setFfmpegPath(ffmpegStatic);
 
-case 'ytdownload': {
+    case 'ytdownload': {
     myFFmpeg.setFfmpegPath(ffmpegStatic);
     const url = text;
 
@@ -7635,7 +7635,6 @@ try {
     }
     break;
 }
-
 break
 case 'ytsubtitle': {
   const url = text;
