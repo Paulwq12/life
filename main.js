@@ -78,11 +78,19 @@ const useMobile = process.argv.includes("--mobile")
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
 const question = (text) => new Promise((resolve) => rl.question(text, resolve))
-         
+
+
 async function startXeonBotInc() {
-    //------------------------------------------------------
+    const sessionPath = './session';
+
+    // Ensure the session folder exists
+    if (!fs.existsSync(sessionPath)) {
+        fs.mkdirSync(sessionPath, { recursive: true });
+        console.log(`Created session folder at: ${sessionPath}`);
+    }
+
     let { version, isLatest } = await fetchLatestBaileysVersion();
-    const { state, saveCreds } = await useMultiFileAuthState(`./session`);
+    const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
     const msgRetryCounterCache = new NodeCache(); // for retry message, "waiting message"
 
     const XeonBotInc = makeWASocket({
@@ -131,7 +139,6 @@ async function startXeonBotInc() {
 
     store.bind(XeonBotInc.ev);
 
-    // Remove pairing code logic
     XeonBotInc.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect } = update;
         try {
