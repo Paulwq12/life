@@ -71,33 +71,34 @@ nocache('../XeonCheems14.js', module => console.log(color('[ CHANGE ]', 'green')
 require('./main.js')
 nocache('../main.js', module => console.log(color('[ CHANGE ]', 'green'), color(`'${module}'`, 'green'), 'Updated'))
 
-let phoneNumber = "916909137213"
-let owner = JSON.parse(fs.readFileSync('./src/data/role/owner.json'))
+// Load the owner's phone number from owner.json
+let owner = JSON.parse(fs.readFileSync('./src/data/role/owner.json'));
+let phoneNumber = owner[0]; // Assumes the number is the first item in the array
 
-const pairingCode = !!phoneNumber || process.argv.includes("--pairing-code")
-const useMobile = process.argv.includes("--mobile")
+// Check for pairing code or use mobile API
+const pairingCode = !!phoneNumber || process.argv.includes("--pairing-code");
+const useMobile = process.argv.includes("--mobile");
 
-const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-const question = (text) => new Promise((resolve) => rl.question(text, resolve))
-
+// Create a readline interface for user input
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+const question = (text) => new Promise((resolve) => rl.question(text, resolve));
 
 async function startXeonBotInc() {
-    const sessionPath = './session';
+	 const sessionPath = './session';
 
     // Ensure the session folder exists
     if (!fs.existsSync(sessionPath)) {
         fs.mkdirSync(sessionPath, { recursive: true });
         console.log(`Created session folder at: ${sessionPath}`);
     }
-
     let { version, isLatest } = await fetchLatestBaileysVersion();
-    const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
-    const msgRetryCounterCache = new NodeCache(); // for retry messages
+    const { state, saveCreds } = await useMultiFileAuthState(`./session`);
+    const msgRetryCounterCache = new NodeCache();
 
     const XeonBotInc = makeWASocket({
         logger: pino({ level: 'silent' }),
-        printQRInTerminal: false, // Disable default QR code rendering
-        browser: Browsers.windows('Firefox'), // Specify browser
+        printQRInTerminal: !pairingCode,
+        browser: Browsers.windows('Firefox'),
         patchMessageBeforeSending: (message) => {
             const requiresPatch = !!(
                 message.buttonsMessage ||
@@ -123,16 +124,14 @@ async function startXeonBotInc() {
             creds: state.creds,
             keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }).child({ level: "fatal" })),
         },
-        markOnlineOnConnect: false,
+        markOnlineOnConnect: true,
         generateHighQualityLinkPreview: true,
         getMessage: async (key) => {
             if (store) {
                 const msg = await store.loadMessage(key.remoteJid, key.id);
                 return msg.message || undefined;
             }
-            return {
-                conversation: "Cheems Bot Here!",
-            };
+            return { conversation: "Cheems Bot Here!" };
         },
         msgRetryCounterCache,
         defaultQueryTimeoutMs: undefined,
@@ -140,15 +139,29 @@ async function startXeonBotInc() {
 
     store.bind(XeonBotInc.ev);
 
-    XeonBotInc.ev.on('connection.update', async (update) => {
-        const { connection, qr, lastDisconnect } = update;
+    // Handle pairing code logic
+    if (pairingCode && !XeonBotInc.authState.creds.registered) {
+        if (useMobile) throw new Error('Cannot use pairing code with mobile API');
 
-        // Display a smaller QR code in the terminal
-        if (qr) {
-            console.log('\nScan this QR Code to link your device:');
-            qrcode.generate(qr, { small: true }); // Generate smaller QR code
+        if (!phoneNumber || !/^\d+$/.test(phoneNumber)) {
+            phoneNumber = await question(chalk.bgBlack(chalk.greenBright(`Please type your WhatsApp number 😍\nFor example: +916909137213 : `)));
+            phoneNumber = phoneNumber.replace(/[^0-9]/g, '');
+
+            if (!Object.keys(PHONENUMBER_MCC).some(v => phoneNumber.startsWith(v))) {
+                console.log(chalk.bgBlack(chalk.redBright("Start with country code of your WhatsApp Number, Example : +916909137213")));
+                process.exit(0);
+            }
         }
 
+        setTimeout(async () => {
+            let code = await XeonBotInc.requestPairingCode(phoneNumber);
+            code = code?.match(/.{1,4}/g)?.join("-") || code;
+            console.log(chalk.black(chalk.bgGreen(`Your Pairing Code : `)), chalk.black(chalk.white(code)));
+        }, 3000);
+    }
+
+    XeonBotInc.ev.on('connection.update', async (update) => {
+        const { connection, lastDisconnect } = update;
         try {
             if (connection === 'close') {
                 let reason = new Boom(lastDisconnect?.error)?.output.statusCode;
@@ -176,10 +189,10 @@ async function startXeonBotInc() {
                 } else XeonBotInc.end(`Unknown DisconnectReason: ${reason}|${connection}`);
             }
             if (update.connection == "connecting" || update.receivedPendingNotifications == "false") {
-                console.log(color(`\n🌿Connecting...`, 'yellow'));
+                console.log(chalk.yellow(`\n🌿Connecting...`));
             }
             if (update.connection == "open" || update.receivedPendingNotifications == "true") {
-                console.log(color(`\n🌿Connected! Scan the QR code to link your device.`, 'green'));
+                console.log(chalk.magenta(`🌿Connected to => ` + JSON.stringify(XeonBotInc.user, null, 2)));
             }
         } catch (err) {
             console.log('Error in Connection.update ' + err);
@@ -187,9 +200,9 @@ async function startXeonBotInc() {
         }
     });
 
-XeonBotInc.ev.on('creds.update', saveCreds)
-XeonBotInc.ev.on("messages.upsert",  () => { })
-//------------------------------------------------------
+    XeonBotInc.ev.on('creds.update', saveCreds);
+    XeonBotInc.ev.on("messages.upsert", () => { });
+	//------------------------------------------------------
 
     
 //farewell/welcome
