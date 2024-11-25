@@ -12,26 +12,29 @@ const path = require('path');
 const http = require('http');
 const puppeteer = require('puppeteer');
 
-// Function to install Chrome if missing
-async function ensureChromeInstalled() {
+// Function to get the Chrome executable path
+async function getChromePath() {
    const { execSync } = require('child_process');
    try {
       console.log('Ensuring Puppeteer dependencies are installed...');
       execSync('npx puppeteer install', { stdio: 'inherit' });
       console.log('Puppeteer browser installed successfully.');
+      const chromePath = puppeteer.executablePath();
+      console.log(`Chrome executable path: ${chromePath}`);
+      return chromePath;
    } catch (error) {
-      console.error('Failed to install Puppeteer browser:', error.message);
+      console.error('Failed to install Puppeteer or get Chrome path:', error.message);
       process.exit(1);
    }
 }
 
 // Function to start Puppeteer and disguise it
-async function startBrowser() {
+async function startBrowser(chromePath) {
    try {
       const browser = await puppeteer.launch({
          args: ['--no-sandbox', '--disable-setuid-sandbox'],
          headless: true,
-         executablePath: puppeteer.executablePath() // Ensures Puppeteer finds the right browser
+         executablePath: chromePath // Use explicitly set Chrome path
       });
       const page = await browser.newPage();
 
@@ -70,22 +73,24 @@ async function start(page) {
             console.log('Restarting Bot...');
             p.kill();
             await page.close(); // Close the Puppeteer page
-            start(await startBrowser().then(b => b.page)); // Restart with a new disguised browser
+            const chromePath = await getChromePath(); // Get the latest Chrome path
+            start(await startBrowser(chromePath).then(b => b.page)); // Restart with a new disguised browser
          }
       })
       .on('exit', async (code) => {
          console.error('Exited with code:', code);
          if (code === '.' || code === 1 || code === 0) {
             await page.close();
-            start(await startBrowser().then(b => b.page)); // Restart on exit
+            const chromePath = await getChromePath(); // Get the latest Chrome path
+            start(await startBrowser(chromePath).then(b => b.page)); // Restart on exit
          }
       });
 }
 
 // Main function to initialize Puppeteer and start the bot
 (async () => {
-   await ensureChromeInstalled(); // Ensure Puppeteer dependencies are installed
-   const { page } = await startBrowser();
+   const chromePath = await getChromePath(); // Ensure Puppeteer dependencies are installed
+   const { page } = await startBrowser(chromePath);
    start(page); // Start the bot with Puppeteer integration
 })();
 
