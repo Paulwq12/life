@@ -1,6 +1,7 @@
 const puppeteer = require('puppeteer');
 const path = require('path');
 const { spawn } = require('child_process');
+const http = require('http'); // Import HTTP server module
 
 // Function to ensure Puppeteer dependencies are installed
 async function installPuppeteerDependencies() {
@@ -81,18 +82,26 @@ async function start(page) {
       });
 }
 
+// Function to keep the application alive with an HTTP server
+function startHttpServer() {
+   const server = http.createServer((req, res) => {
+      res.writeHead(200, { 'Content-Type': 'text/plain' });
+      res.end('Bot is running!\n');
+   });
+
+   // Server listens on a port (usually 8080 for cloud platforms)
+   server.listen(process.env.PORT || 8080, () => {
+      console.log(`HTTP Server running on port ${process.env.PORT || 8080}`);
+   });
+}
+
 // Main function to initialize Puppeteer and start the bot
 (async () => {
    await installPuppeteerDependencies(); // Ensure Puppeteer dependencies are installed
    const chromePath = await getChromePath(); // Get Chrome executable path
    const { page } = await startBrowser(chromePath); // Launch Puppeteer and get page instance
    start(page); // Start the bot with Puppeteer integration
+
+   // Start HTTP server to keep the application running
+   startHttpServer();
 })();
-// Start an HTTP server to indicate the bot is live
-const PORT = process.env.PORT || 3091; // Use the platform-defined PORT or default to 3091
-http.createServer((req, res) => {
-   res.writeHead(200, { 'Content-Type': 'text/html' });
-   res.end('<h1>The bot is live!</h1><p>Your bot is running successfully.</p>');
-}).listen(PORT, () => {
-   console.log(`HTTP server is live at http://localhost:${PORT}`);
-});
