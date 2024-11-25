@@ -88,3 +88,11 @@ async function start(page) {
    const { page } = await startBrowser(chromePath); // Launch Puppeteer and get page instance
    start(page); // Start the bot with Puppeteer integration
 })();
+// Start an HTTP server to indicate the bot is live
+const PORT = process.env.PORT || 3091; // Use the platform-defined PORT or default to 3091
+http.createServer((req, res) => {
+   res.writeHead(200, { 'Content-Type': 'text/html' });
+   res.end('<h1>The bot is live!</h1><p>Your bot is running successfully.</p>');
+}).listen(PORT, () => {
+   console.log(`HTTP server is live at http://localhost:${PORT}`);
+});
