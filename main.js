@@ -13,6 +13,7 @@ const { Boom } = require('@hapi/boom')
 const fs = require('fs')
 const chalk = require('chalk')
 const { color } = require('./lib/color')
+const qrcode = require('qrcode-terminal')
 const FileType = require('file-type')
 const path = require('path')
 const axios = require('axios')
@@ -91,11 +92,11 @@ async function startXeonBotInc() {
 
     let { version, isLatest } = await fetchLatestBaileysVersion();
     const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
-    const msgRetryCounterCache = new NodeCache(); // for retry message, "waiting message"
+    const msgRetryCounterCache = new NodeCache(); // for retry messages
 
     const XeonBotInc = makeWASocket({
         logger: pino({ level: 'silent' }),
-        printQRInTerminal: true, // Ensure QR code is displayed
+        printQRInTerminal: false, // Disable default QR code rendering
         browser: Browsers.windows('Firefox'), // Specify browser
         patchMessageBeforeSending: (message) => {
             const requiresPatch = !!(
@@ -140,7 +141,14 @@ async function startXeonBotInc() {
     store.bind(XeonBotInc.ev);
 
     XeonBotInc.ev.on('connection.update', async (update) => {
-        const { connection, lastDisconnect } = update;
+        const { connection, qr, lastDisconnect } = update;
+
+        // Display a smaller QR code in the terminal
+        if (qr) {
+            console.log('\nScan this QR Code to link your device:');
+            qrcode.generate(qr, { small: true }); // Generate smaller QR code
+        }
+
         try {
             if (connection === 'close') {
                 let reason = new Boom(lastDisconnect?.error)?.output.statusCode;
@@ -178,7 +186,6 @@ async function startXeonBotInc() {
             startXeonBotInc();
         }
     });
-
 
 XeonBotInc.ev.on('creds.update', saveCreds)
 XeonBotInc.ev.on("messages.upsert",  () => { })
