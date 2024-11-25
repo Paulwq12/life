@@ -13,7 +13,6 @@ const { Boom } = require('@hapi/boom')
 const fs = require('fs')
 const chalk = require('chalk')
 const { color } = require('./lib/color')
-const qrcode = require('qrcode-terminal')
 const FileType = require('file-type')
 const path = require('path')
 const axios = require('axios')
@@ -75,14 +74,12 @@ nocache('../main.js', module => console.log(color('[ CHANGE ]', 'green'), color(
 let owner = JSON.parse(fs.readFileSync('./src/data/role/owner.json'));
 let phoneNumber = owner[0]; // Assumes the number is the first item in the array
 
-// Check for pairing code or use mobile API
-const pairingCode = !!phoneNumber || process.argv.includes("--pairing-code");
-const useMobile = process.argv.includes("--mobile");
+const pairingCode = !!phoneNumber || process.argv.includes("--pairing-code")
+const useMobile = process.argv.includes("--mobile")
 
-// Create a readline interface for user input
-const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-const question = (text) => new Promise((resolve) => rl.question(text, resolve));
-
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+const question = (text) => new Promise((resolve) => rl.question(text, resolve))
+         
 async function startXeonBotInc() {
 	 const sessionPath = './session';
 
@@ -91,15 +88,15 @@ async function startXeonBotInc() {
         fs.mkdirSync(sessionPath, { recursive: true });
         console.log(`Created session folder at: ${sessionPath}`);
     }
-    let { version, isLatest } = await fetchLatestBaileysVersion();
-    const { state, saveCreds } = await useMultiFileAuthState(`./session`);
-    const msgRetryCounterCache = new NodeCache();
-
+//------------------------------------------------------
+let { version, isLatest } = await fetchLatestBaileysVersion()
+const {  state, saveCreds } =await useMultiFileAuthState(`./session`)
+    const msgRetryCounterCache = new NodeCache() // for retry message, "waiting message"
     const XeonBotInc = makeWASocket({
         logger: pino({ level: 'silent' }),
-        printQRInTerminal: !pairingCode,
-        browser: Browsers.windows('Firefox'),
-        patchMessageBeforeSending: (message) => {
+        printQRInTerminal: !pairingCode, // popping up QR in terminal log
+      browser: Browsers.windows('Firefox'), // for this issues https://github.com/WhiskeySockets/Baileys/issues/328
+      patchMessageBeforeSending: (message) => {
             const requiresPatch = !!(
                 message.buttonsMessage ||
                 message.templateMessage ||
@@ -120,26 +117,30 @@ async function startXeonBotInc() {
             }
             return message;
         },
-        auth: {
-            creds: state.creds,
-            keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" }).child({ level: "fatal" })),
-        },
-        markOnlineOnConnect: true,
-        generateHighQualityLinkPreview: true,
-        getMessage: async (key) => {
+     auth: {
+         creds: state.creds,
+         keys: makeCacheableSignalKeyStore(state.keys, Pino({ level: "fatal" }).child({ level: "fatal" })),
+      },
+      markOnlineOnConnect: false, // set false for offline
+      generateHighQualityLinkPreview: true, // make high preview link
+      getMessage: async (key) => {
             if (store) {
-                const msg = await store.loadMessage(key.remoteJid, key.id);
-                return msg.message || undefined;
+                const msg = await store.loadMessage(key.remoteJid, key.id)
+                return msg.message || undefined
             }
-            return { conversation: "Cheems Bot Here!" };
+            return {
+                conversation: "Cheems Bot Here!"
+            }
         },
-        msgRetryCounterCache,
-        defaultQueryTimeoutMs: undefined,
-    });
+      msgRetryCounterCache, // Resolve waiting messages
+      defaultQueryTimeoutMs: undefined, // for this issues https://github.com/WhiskeySockets/Baileys/issues/276
+   })
+   
+   store.bind(XeonBotInc.ev)
 
-    store.bind(XeonBotInc.ev);
-
-    // Handle pairing code logic
+    // login use pairing code
+   // source code https://github.com/WhiskeySockets/Baileys/blob/master/Example/example.ts#L61
+  // Handle pairing code logic
     if (pairingCode && !XeonBotInc.authState.creds.registered) {
         if (useMobile) throw new Error('Cannot use pairing code with mobile API');
 
@@ -153,56 +154,67 @@ async function startXeonBotInc() {
             }
         }
 
-        setTimeout(async () => {
-            let code = await XeonBotInc.requestPairingCode(phoneNumber);
-            code = code?.match(/.{1,4}/g)?.join("-") || code;
-            console.log(chalk.black(chalk.bgGreen(`Your Pairing Code : `)), chalk.black(chalk.white(code)));
-        }, 3000);
-    }
-
-    XeonBotInc.ev.on('connection.update', async (update) => {
-        const { connection, lastDisconnect } = update;
-        try {
-            if (connection === 'close') {
-                let reason = new Boom(lastDisconnect?.error)?.output.statusCode;
-                if (reason === DisconnectReason.badSession) {
-                    console.log(`Bad Session File, Please Delete Session and Scan Again`);
-                    startXeonBotInc();
-                } else if (reason === DisconnectReason.connectionClosed) {
-                    console.log("Connection closed, reconnecting....");
-                    startXeonBotInc();
-                } else if (reason === DisconnectReason.connectionLost) {
-                    console.log("Connection Lost from Server, reconnecting...");
-                    startXeonBotInc();
-                } else if (reason === DisconnectReason.connectionReplaced) {
-                    console.log("Connection Replaced, Another New Session Opened, Please Close Current Session First");
-                    startXeonBotInc();
-                } else if (reason === DisconnectReason.loggedOut) {
-                    console.log(`Device Logged Out, Please Delete Session and Scan Again.`);
-                    startXeonBotInc();
-                } else if (reason === DisconnectReason.restartRequired) {
-                    console.log("Restart Required, Restarting...");
-                    startXeonBotInc();
-                } else if (reason === DisconnectReason.timedOut) {
-                    console.log("Connection TimedOut, Reconnecting...");
-                    startXeonBotInc();
-                } else XeonBotInc.end(`Unknown DisconnectReason: ${reason}|${connection}`);
-            }
-            if (update.connection == "connecting" || update.receivedPendingNotifications == "false") {
-                console.log(chalk.yellow(`\n🌿Connecting...`));
-            }
-            if (update.connection == "open" || update.receivedPendingNotifications == "true") {
-                console.log(chalk.magenta(`🌿Connected to => ` + JSON.stringify(XeonBotInc.user, null, 2)));
-            }
-        } catch (err) {
-            console.log('Error in Connection.update ' + err);
-            startXeonBotInc();
-        }
-    });
-
-    XeonBotInc.ev.on('creds.update', saveCreds);
-    XeonBotInc.ev.on("messages.upsert", () => { });
-	//------------------------------------------------------
+      setTimeout(async () => {
+         let code = await XeonBotInc.requestPairingCode(phoneNumber)
+         code = code?.match(/.{1,4}/g)?.join("-") || code
+         console.log(chalk.black(chalk.bgGreen(`Your Pairing Code : `)), chalk.black(chalk.white(code)))
+      }, 3000)
+   }
+   
+   XeonBotInc.ev.on('connection.update', async (update) => {
+	const {
+		connection,
+		lastDisconnect
+	} = update
+try{
+		if (connection === 'close') {
+			let reason = new Boom(lastDisconnect?.error)?.output.statusCode
+			if (reason === DisconnectReason.badSession) {
+				console.log(`Bad Session File, Please Delete Session and Scan Again`);
+				startXeonBotInc()
+			} else if (reason === DisconnectReason.connectionClosed) {
+				console.log("Connection closed, reconnecting....");
+				startXeonBotInc();
+			} else if (reason === DisconnectReason.connectionLost) {
+				console.log("Connection Lost from Server, reconnecting...");
+				startXeonBotInc();
+			} else if (reason === DisconnectReason.connectionReplaced) {
+				console.log("Connection Replaced, Another New Session Opened, Please Close Current Session First");
+				startXeonBotInc()
+			} else if (reason === DisconnectReason.loggedOut) {
+				console.log(`Device Logged Out, Please Delete Session and Scan Again.`);
+				startXeonBotInc();
+			} else if (reason === DisconnectReason.restartRequired) {
+				console.log("Restart Required, Restarting...");
+				startXeonBotInc();
+			} else if (reason === DisconnectReason.timedOut) {
+				console.log("Connection TimedOut, Reconnecting...");
+				startXeonBotInc();
+			} else XeonBotInc.end(`Unknown DisconnectReason: ${reason}|${connection}`)
+		}
+		if (update.connection == "connecting" || update.receivedPendingNotifications == "false") {
+			console.log(color(`\n🌿Connecting...`, 'yellow'))
+		}
+		if (update.connection == "open" || update.receivedPendingNotifications == "true") {
+			console.log(color(` `,'magenta'))
+            console.log(color(`🌿Connected to => ` + JSON.stringify(XeonBotInc.user, null, 2), 'yellow'))
+            console.log(chalk.yellow(`\n\n               ${chalk.bold.blue(`[ ${botname} ]`)}\n\n`))
+            console.log(color(`< ================================================== >`, 'cyan'))
+	        console.log(color(`\n${themeemoji} YT CHANNEL: Xeon`,'magenta'))
+            console.log(color(`${themeemoji} GITHUB: DGXeon `,'magenta'))
+            console.log(color(`${themeemoji} INSTAGRAM: @unicorn_xeon `,'magenta'))
+            console.log(color(`${themeemoji} WA NUMBER: ${owner}`,'magenta'))
+            console.log(color(`${themeemoji} CREDIT: ${wm}\n`,'magenta'))
+		}
+	
+} catch (err) {
+	  console.log('Error in Connection.update '+err)
+	  startXeonBotInc()
+	}
+})
+XeonBotInc.ev.on('creds.update', saveCreds)
+XeonBotInc.ev.on("messages.upsert",  () => { })
+//------------------------------------------------------
 
     
 //farewell/welcome
