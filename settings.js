@@ -17,15 +17,9 @@ function loadOwnerName(callback) {
             const creds = JSON.parse(data);
 
             // Check if the 'me' object exists and has a 'name' property
-            if (creds.me && (creds.me.name || creds.me.id)) {
-    if (creds.me.name) {
-        global.ownername = creds.me.name; // Assign the name to global.ownername
-    }
-    if (creds.me.id) {
-        global.ownerid = creds.me.id;    // Assign the id to global.ownerid
-    }
-    callback();
-            // Call the callback function
+            if (creds.me && creds.me.name) {
+                global.ownername = creds.me.name; // Assign the name to global.ownername
+                callback(); // Call the callback function
             } else {
                 console.error('Owner name not found in creds.json');
                 callback(); // Call the callback function even if the name is not found
