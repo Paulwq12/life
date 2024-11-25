@@ -17,6 +17,7 @@
     "dependencies": {
         "@whiskeysockets/baileys": "latest",
         "@adiwajshing/keyed-db": "latest",
+        "qrcode-terminal": "latest",
         "@hapi/boom": "latest",
         "anime-wallpaper": "^1.0.2",
         "puppeteer": "latest",
