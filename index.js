@@ -1,42 +1,61 @@
 // Base by DGXeon
-// re-upload? recode? copy code? give credit ya :)
+// Re-upload? Recode? Copy code? Give credit ya :)
 // YouTube: @DGXeon
 // Instagram: unicorn_xeon13
 // Telegram: t.me/xeonbotinc
 // GitHub: @DGXeon
 // WhatsApp: +916909137213
-// Want more free bot scripts? subscribe to my YouTube channel: https://youtube.com/@DGXeon
+// Want more free bot scripts? Subscribe to my YouTube channel: https://youtube.com/@DGXeon
 
 const { spawn } = require('child_process');
 const path = require('path');
 const http = require('http');
 const puppeteer = require('puppeteer');
 
+// Function to install Chrome if missing
+async function ensureChromeInstalled() {
+   const { execSync } = require('child_process');
+   try {
+      console.log('Ensuring Puppeteer dependencies are installed...');
+      execSync('npx puppeteer install', { stdio: 'inherit' });
+      console.log('Puppeteer browser installed successfully.');
+   } catch (error) {
+      console.error('Failed to install Puppeteer browser:', error.message);
+      process.exit(1);
+   }
+}
+
 // Function to start Puppeteer and disguise it
 async function startBrowser() {
-   const browser = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      headless: true,
-   });
-   const page = await browser.newPage();
+   try {
+      const browser = await puppeteer.launch({
+         args: ['--no-sandbox', '--disable-setuid-sandbox'],
+         headless: true,
+         executablePath: puppeteer.executablePath() // Ensures Puppeteer finds the right browser
+      });
+      const page = await browser.newPage();
 
-   // Disguise Puppeteer as a regular browser
-   await page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36'
-   );
-   await page.evaluateOnNewDocument(() => {
-      Object.defineProperty(navigator, 'webdriver', { get: () => false });
-   });
+      // Disguise Puppeteer as a regular browser
+      await page.setUserAgent(
+         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36'
+      );
+      await page.evaluateOnNewDocument(() => {
+         Object.defineProperty(navigator, 'webdriver', { get: () => false });
+      });
 
-   // Add additional disguises
-   await page.evaluateOnNewDocument(() => {
-      window.chrome = { runtime: {} };
-      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
-      Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
-   });
+      // Add additional disguises
+      await page.evaluateOnNewDocument(() => {
+         window.chrome = { runtime: {} };
+         Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+         Object.defineProperty(navigator, 'languages', { get: () => ['en-US', 'en'] });
+      });
 
-   console.log('Browser started and disguised.');
-   return { browser, page };
+      console.log('Browser started and disguised.');
+      return { browser, page };
+   } catch (error) {
+      console.error('Failed to start Puppeteer:', error.message);
+      process.exit(1);
+   }
 }
 
 // Function to start the bot
@@ -65,12 +84,13 @@ async function start(page) {
 
 // Main function to initialize Puppeteer and start the bot
 (async () => {
+   await ensureChromeInstalled(); // Ensure Puppeteer dependencies are installed
    const { page } = await startBrowser();
    start(page); // Start the bot with Puppeteer integration
 })();
 
 // Start an HTTP server to indicate the bot is live
-const PORT = process.env.PORT || 3091; // Use the platform-defined PORT or default to 3000
+const PORT = process.env.PORT || 3091; // Use the platform-defined PORT or default to 3091
 http.createServer((req, res) => {
    res.writeHead(200, { 'Content-Type': 'text/html' });
    res.end('<h1>The bot is live!</h1><p>Your bot is running successfully.</p>');
