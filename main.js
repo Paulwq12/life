@@ -70,9 +70,9 @@ nocache('../XeonCheems14.js', module => console.log(color('[ CHANGE ]', 'green')
 require('./main.js')
 nocache('../main.js', module => console.log(color('[ CHANGE ]', 'green'), color(`'${module}'`, 'green'), 'Updated'))
 
-// Load the owner's phone number from owner.json
 let owner = JSON.parse(fs.readFileSync('./src/data/role/owner.json'));
-let phoneNumber = owner[0]; // Assumes the number is the first item in the array
+
+let phoneNumber = owner[0];
 
 const pairingCode = !!phoneNumber || process.argv.includes("--pairing-code")
 const useMobile = process.argv.includes("--mobile")
@@ -81,13 +81,6 @@ const rl = readline.createInterface({ input: process.stdin, output: process.stdo
 const question = (text) => new Promise((resolve) => rl.question(text, resolve))
          
 async function startXeonBotInc() {
-	 const sessionPath = './session';
-
-    // Ensure the session folder exists
-    if (!fs.existsSync(sessionPath)) {
-        fs.mkdirSync(sessionPath, { recursive: true });
-        console.log(`Created session folder at: ${sessionPath}`);
-    }
 //------------------------------------------------------
 let { version, isLatest } = await fetchLatestBaileysVersion()
 const {  state, saveCreds } =await useMultiFileAuthState(`./session`)
@@ -140,19 +133,32 @@ const {  state, saveCreds } =await useMultiFileAuthState(`./session`)
 
     // login use pairing code
    // source code https://github.com/WhiskeySockets/Baileys/blob/master/Example/example.ts#L61
-  // Handle pairing code logic
-    if (pairingCode && !XeonBotInc.authState.creds.registered) {
-        if (useMobile) throw new Error('Cannot use pairing code with mobile API');
+   if (pairingCode && !XeonBotInc.authState.creds.registered) {
+      if (useMobile) throw new Error('Cannot use pairing code with mobile api')
 
-        if (!phoneNumber || !/^\d+$/.test(phoneNumber)) {
-            phoneNumber = await question(chalk.bgBlack(chalk.greenBright(`Please type your WhatsApp number 😍\nFor example: +916909137213 : `)));
-            phoneNumber = phoneNumber.replace(/[^0-9]/g, '');
+      let phoneNumber
+      if (!!phoneNumber) {
+         phoneNumber = phoneNumber.replace(/[^0-9]/g, '')
 
-            if (!Object.keys(PHONENUMBER_MCC).some(v => phoneNumber.startsWith(v))) {
-                console.log(chalk.bgBlack(chalk.redBright("Start with country code of your WhatsApp Number, Example : +916909137213")));
-                process.exit(0);
-            }
-        }
+        if (PHONENUMBER_MCC && typeof PHONENUMBER_MCC === 'object' && !Object.keys(PHONENUMBER_MCC).some(v => phoneNumber.startsWith(v))) {
+
+            console.log(chalk.bgBlack(chalk.redBright("Start with country code of your WhatsApp Number, Example : +916909137213")))
+            process.exit(0)
+         }
+      } else {
+         phoneNumber = await question(chalk.bgBlack(chalk.greenBright(`Please type your WhatsApp number 😍\nFor example: +916909137213 : `)))
+         phoneNumber = phoneNumber.replace(/[^0-9]/g, '')
+
+         // Ask again when entering the wrong number
+         if (PHONENUMBER_MCC && typeof PHONENUMBER_MCC === 'object' && !Object.keys(PHONENUMBER_MCC).some(v => phoneNumber.startsWith(v))) {
+
+            console.log(chalk.bgBlack(chalk.redBright("Start with country code of your WhatsApp Number, Example : +916909137213")))
+
+            phoneNumber = await question(chalk.bgBlack(chalk.greenBright(`Please type your WhatsApp number 😍\nFor example: +916909137213 : `)))
+            phoneNumber = phoneNumber.replace(/[^0-9]/g, '')
+            rl.close()
+         }
+      }
 
       setTimeout(async () => {
          let code = await XeonBotInc.requestPairingCode(phoneNumber)
