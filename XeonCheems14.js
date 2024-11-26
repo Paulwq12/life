@@ -7489,41 +7489,12 @@ let cap = `Title: ${video.title}\nViews: ${video.views}\nDuration: ${video.times
 
 myFFmpeg.setFfmpegPath(ffmpegStatic);
 
-         case 'ytdownload': {
-    
+       case 'ytdownload': {
     myFFmpeg.setFfmpegPath(ffmpegStatic);
 
-    // Set up cookies and agent
-  const cookies = [
-    { name: "VISITOR_INFO1_LIVE", value: "2m3lVSZ4ER4" },
-    { name: "VISITOR_PRIVACY_METADATA", value: "CgJORxIEGgAgVw%3D%3D" },
-    { name: "PREF", value: "f6=40000000&f7=4100&tz=Africa.Lagos&f4=4000000" },
-    { name: "LOGIN_INFO", value: "AFmmF2swRQIgHc6-MwIHc5MwqaYzQll1rdP0EKaiqZL6zAjA99y_gCoCIQDyDN-WshEGFAaPyRYQ1Im3YRfo2yXDGpgwA5Wj9Rxazg:QUQ3MjNmeGlkeU1Cb0o0Y3RDM3prZVQzbFFKQWV6X1RIb2ltVHZreFZyMFVlY0ZuMDR6TWJWd1NuaURwdTd3enNuSXI2WTFGMGdKcmxneWZ4WnJfbC1oVHpfLWhBaVZCamVCV0N2REdrNk1vN2JSb2d4TVJOdjY2UjZEVTdtVzVtT3VONXI0dkNvZWhXcDZJeDdyZ1A5TjRLbnFWb1AtNlNR" },
-    { name: "HSID", value: "A8JuRwbL2qdSJTqTY" },
-    { name: "SSID", value: "ARsAwKCGsJrspC8MB" },
-    { name: "APISID", value: "_AAOBXSROhVx8sAg/AI8GuNQZOg-qX4OlY" },
-    { name: "SAPISID", value: "I8PM2rEadavlyiUf/AuQPkCv_gK40m0CZv" },
-    { name: "__Secure-1PAPISID", value: "I8PM2rEadavlyiUf/AuQPkCv_gK40m0CZv" },
-    { name: "__Secure-3PAPISID", value: "I8PM2rEadavlyiUf/AuQPkCv_gK40m0CZv" },
-    { name: "SID", value: "g.a000qgicJJG5PmT8qRkcKS8DiCpXhhsoeRuP44QlGfz6wuThkGkR9smeMXyc25Ag3fBh0JgkowACgYKAfASARQSFQHGX2Mic989CCp5eTGlaG-mP_-aYxoVAUF8yKozyWFBM3e9baGujQglo57S0076" },
-    { name: "__Secure-1PSID", value: "g.a000qgicJJG5PmT8qRkcKS8DiCpXhhsoeRuP44QlGfz6wuThkGkR9jFj4ENjzvKU1dERZ3ntKgACgYKAa0SARQSFQHGX2MicKrLIJEffGWu4yzOnMJxmBoVAUF8yKp11eQyO8T1yxP-UDE8LHT10076" },
-    { name: "__Secure-3PSID", value: "g.a000qgicJJG5PmT8qRkcKS8DiCpXhhsoeRuP44QlGfz6wuThkGkRr0U82TRM1f01TrzOYoCS_gACgYKAdQSARQSFQHGX2MiaORmucnPCYcc17VC-MESABoVAUF8yKo9KmTLDqNdzu81-l4BvPZ40076" },
-    { name: "__Secure-1PSIDTS", value: "sidts-CjIBQT4rXx4j9yH0_rGr4V8L72xIMbkQeE4SHLvP2_sn6sQO1epZioNYKf5FW7ejIXbWaBAA" },
-    { name: "__Secure-3PSIDTS", value: "sidts-CjIBQT4rXx4j9yH0_rGr4V8L72xIMbkQeE4SHLvP2_sn6sQO1epZioNYKf5FW7ejIXbWaBAA" },
-    { name: "YSC", value: "1R_2PaETQIs" },
-    { name: "__Secure-ROLLOUT_TOKEN", value: "COCiwuirzZj98gEQxJWa3NveiQMY7KnKjuP5iQM%3D" },
-    { name: "SIDCC", value: "AKEyXzVTeiWG8R6G9m1Y-0J4L8wm3xwrXSDTyGUeUc8Vp0wpZHWnPKTKw7WO9cuJUd_UrR5HNg" },
-    { name: "__Secure-1PSIDCC", value: "AKEyXzWKwwVsaYhTuhCCP-fHfDE28h9WA42Hq6_0CdrvObYhtr2Vh7fkN1hpnMRLdZ8K_rYaHA" },
-    { name: "__Secure-3PSIDCC", value: "AKEyXzUMrp1UVl3CerfreHy7ewY_sz83OceyYHDqnMcmdHt3yhZR3xISzy88ng15aZ1XY1_n1g" }
-];
-
-
-    const agentOptions = {
-        pipelining: 5,
-        maxRedirections: 0,
-    };
-    const agent = ytDownloader.createAgent(cookies, agentOptions);
-
+    // Set up proxy using the provided proxy details (IP:Port)
+const proxyUrl = 'http://44.218.183.55:80';  // Proxy IP and Port
+const agent = ytDownloader.createProxyAgent({ uri: proxyUrl });
     const url = text;
     if (!ytDownloader.validateURL(url)) return replygcxeon("Invalid YouTube URL. Please try again.");
 
@@ -7626,6 +7597,7 @@ myFFmpeg.setFfmpegPath(ffmpegStatic);
     }
     break;
 }
+
 
 break
 case 'ytsubtitle': {
