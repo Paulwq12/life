@@ -7489,111 +7489,144 @@ let cap = `Title: ${video.title}\nViews: ${video.views}\nDuration: ${video.times
 
 myFFmpeg.setFfmpegPath(ffmpegStatic);
 
-        case 'ytdownload': {
-            myFFmpeg.setFfmpegPath(ffmpegStatic);
-  const url = text;
-  if (!ytDownloader.validateURL(url)) return replygcxeon("Invalid YouTube URL. Please try again.");
+         case 'ytdownload': {
+    
+    myFFmpeg.setFfmpegPath(ffmpegStatic);
 
-  try {
-    const info = await ytDownloader.getInfo(url);
-    const videoTitle = info.videoDetails.title;
+    // Set up cookies and agent
+  const cookies = [
+    { name: "VISITOR_INFO1_LIVE", value: "2m3lVSZ4ER4" },
+    { name: "VISITOR_PRIVACY_METADATA", value: "CgJORxIEGgAgVw%3D%3D" },
+    { name: "PREF", value: "f6=40000000&f7=4100&tz=Africa.Lagos&f4=4000000" },
+    { name: "LOGIN_INFO", value: "AFmmF2swRQIgHc6-MwIHc5MwqaYzQll1rdP0EKaiqZL6zAjA99y_gCoCIQDyDN-WshEGFAaPyRYQ1Im3YRfo2yXDGpgwA5Wj9Rxazg:QUQ3MjNmeGlkeU1Cb0o0Y3RDM3prZVQzbFFKQWV6X1RIb2ltVHZreFZyMFVlY0ZuMDR6TWJWd1NuaURwdTd3enNuSXI2WTFGMGdKcmxneWZ4WnJfbC1oVHpfLWhBaVZCamVCV0N2REdrNk1vN2JSb2d4TVJOdjY2UjZEVTdtVzVtT3VONXI0dkNvZWhXcDZJeDdyZ1A5TjRLbnFWb1AtNlNR" },
+    { name: "HSID", value: "A8JuRwbL2qdSJTqTY" },
+    { name: "SSID", value: "ARsAwKCGsJrspC8MB" },
+    { name: "APISID", value: "_AAOBXSROhVx8sAg/AI8GuNQZOg-qX4OlY" },
+    { name: "SAPISID", value: "I8PM2rEadavlyiUf/AuQPkCv_gK40m0CZv" },
+    { name: "__Secure-1PAPISID", value: "I8PM2rEadavlyiUf/AuQPkCv_gK40m0CZv" },
+    { name: "__Secure-3PAPISID", value: "I8PM2rEadavlyiUf/AuQPkCv_gK40m0CZv" },
+    { name: "SID", value: "g.a000qgicJJG5PmT8qRkcKS8DiCpXhhsoeRuP44QlGfz6wuThkGkR9smeMXyc25Ag3fBh0JgkowACgYKAfASARQSFQHGX2Mic989CCp5eTGlaG-mP_-aYxoVAUF8yKozyWFBM3e9baGujQglo57S0076" },
+    { name: "__Secure-1PSID", value: "g.a000qgicJJG5PmT8qRkcKS8DiCpXhhsoeRuP44QlGfz6wuThkGkR9jFj4ENjzvKU1dERZ3ntKgACgYKAa0SARQSFQHGX2MicKrLIJEffGWu4yzOnMJxmBoVAUF8yKp11eQyO8T1yxP-UDE8LHT10076" },
+    { name: "__Secure-3PSID", value: "g.a000qgicJJG5PmT8qRkcKS8DiCpXhhsoeRuP44QlGfz6wuThkGkRr0U82TRM1f01TrzOYoCS_gACgYKAdQSARQSFQHGX2MiaORmucnPCYcc17VC-MESABoVAUF8yKo9KmTLDqNdzu81-l4BvPZ40076" },
+    { name: "__Secure-1PSIDTS", value: "sidts-CjIBQT4rXx4j9yH0_rGr4V8L72xIMbkQeE4SHLvP2_sn6sQO1epZioNYKf5FW7ejIXbWaBAA" },
+    { name: "__Secure-3PSIDTS", value: "sidts-CjIBQT4rXx4j9yH0_rGr4V8L72xIMbkQeE4SHLvP2_sn6sQO1epZioNYKf5FW7ejIXbWaBAA" },
+    { name: "YSC", value: "1R_2PaETQIs" },
+    { name: "__Secure-ROLLOUT_TOKEN", value: "COCiwuirzZj98gEQxJWa3NveiQMY7KnKjuP5iQM%3D" },
+    { name: "SIDCC", value: "AKEyXzVTeiWG8R6G9m1Y-0J4L8wm3xwrXSDTyGUeUc8Vp0wpZHWnPKTKw7WO9cuJUd_UrR5HNg" },
+    { name: "__Secure-1PSIDCC", value: "AKEyXzWKwwVsaYhTuhCCP-fHfDE28h9WA42Hq6_0CdrvObYhtr2Vh7fkN1hpnMRLdZ8K_rYaHA" },
+    { name: "__Secure-3PSIDCC", value: "AKEyXzUMrp1UVl3CerfreHy7ewY_sz83OceyYHDqnMcmdHt3yhZR3xISzy88ng15aZ1XY1_n1g" }
+];
 
-    // Set up separate streams for video and audio
-    const videoStream = ytDownloader(url, { quality: '135' }); // 480p video only
-    const audioStream = ytDownloader(url, { quality: '140' }); // audio only
 
-    // Define temporary file paths in 'tmp/' directory
-    const videoFile = './tmp/temp_video.mp4';
-    const audioFile = './tmp/temp_audio.m4a';
-    const outputFile = './tmp/temp_output.mp4';
+    const agentOptions = {
+        pipelining: 5,
+        maxRedirections: 0,
+    };
+    const agent = ytDownloader.createAgent(cookies, agentOptions);
 
-    // Function to handle downloading completion of both video and audio
-    const downloadCompleted = new Promise((resolve, reject) => {
-      let videoDone = false;
-      let audioDone = false;
+    const url = text;
+    if (!ytDownloader.validateURL(url)) return replygcxeon("Invalid YouTube URL. Please try again.");
 
-      const checkCompletion = () => {
-        if (videoDone && audioDone) resolve();
-      };
+    try {
+        const info = await ytDownloader.getInfo(url, { agent });
+        const videoTitle = info.videoDetails.title;
 
-      // Video stream
-      const videoFileStream = videoStream.pipe(fileSys.createWriteStream(videoFile));
-      videoFileStream.on('finish', () => {
-        console.log("Video download complete.");
-        videoDone = true;
-        checkCompletion();
-      });
-      videoStream.on('error', (error) => {
-        console.error("Video Stream Error:", error);
-        reject(error);
-      });
+        // Set up separate streams for video and audio
+        const videoStream = ytDownloader(url, { quality: '135', agent }); // 480p video only
+        const audioStream = ytDownloader(url, { quality: '140', agent }); // audio only
 
-      // Audio stream
-      const audioFileStream = audioStream.pipe(fileSys.createWriteStream(audioFile));
-      audioFileStream.on('finish', () => {
-        console.log("Audio download complete.");
-        audioDone = true;
-        checkCompletion();
-      });
-      audioStream.on('error', (error) => {
-        console.error("Audio Stream Error:", error);
-        reject(error);
-      });
-    });
+        // Define temporary file paths in 'tmp/' directory
+        const videoFile = './tmp/temp_video.mp4';
+        const audioFile = './tmp/temp_audio.m4a';
+        const outputFile = './tmp/temp_output.mp4';
 
-    // Wait for both downloads to complete before starting FFmpeg
-    await downloadCompleted;
+        // Function to handle downloading completion of both video and audio
+        const downloadCompleted = new Promise((resolve, reject) => {
+            let videoDone = false;
+            let audioDone = false;
 
-    // Check that both files exist before starting FFmpeg
-    if (!fileSys.existsSync(videoFile) || !fileSys.existsSync(audioFile)) {
-      console.error("Error: One or both of the temp files do not exist.");
-      replygcxeon("Failed to download video and audio. Please try again.");
-      return;
+            const checkCompletion = () => {
+                if (videoDone && audioDone) resolve();
+            };
+
+            // Video stream
+            const videoFileStream = videoStream.pipe(fileSys.createWriteStream(videoFile));
+            videoFileStream.on('finish', () => {
+                console.log("Video download complete.");
+                videoDone = true;
+                checkCompletion();
+            });
+            videoStream.on('error', (error) => {
+                console.error("Video Stream Error:", error);
+                reject(error);
+            });
+
+            // Audio stream
+            const audioFileStream = audioStream.pipe(fileSys.createWriteStream(audioFile));
+            audioFileStream.on('finish', () => {
+                console.log("Audio download complete.");
+                audioDone = true;
+                checkCompletion();
+            });
+            audioStream.on('error', (error) => {
+                console.error("Audio Stream Error:", error);
+                reject(error);
+            });
+        });
+
+        // Wait for both downloads to complete before starting FFmpeg
+        await downloadCompleted;
+
+        // Check that both files exist before starting FFmpeg
+        if (!fileSys.existsSync(videoFile) || !fileSys.existsSync(audioFile)) {
+            console.error("Error: One or both of the temp files do not exist.");
+            replygcxeon("Failed to download video and audio. Please try again.");
+            return;
+        }
+
+        console.log("Both video and audio files are ready. Starting FFmpeg merge...");
+
+        myFFmpeg(videoFile)
+            .input(audioFile)
+            .output(outputFile)
+            .videoCodec('copy') // Copy video codec directly to avoid re-encoding
+            .audioCodec('copy') // Copy audio codec if it's compatible (or use 'aac' if issues arise)
+            .on('start', (commandLine) => {
+                console.log("FFmpeg command:", commandLine); // Debug command used
+            })
+            .on('end', async () => {
+                console.log("FFmpeg merge complete.");
+
+                if (!fileSys.existsSync(outputFile)) {
+                    console.error("FFmpeg failed to create the output file.");
+                    replygcxeon("An error occurred while merging video and audio. Please try again.");
+                    return;
+                }
+
+                const videoBuffer = fileSys.readFileSync(outputFile);
+                await XeonBotInc.sendMessage(m.chat, {
+                    video: videoBuffer,
+                    mimeType: 'video/mp4',
+                    caption: `Here is your video: ${videoTitle}`,
+                }, { quoted: m });
+
+                fileSys.unlinkSync(videoFile);
+                fileSys.unlinkSync(audioFile);
+                fileSys.unlinkSync(outputFile);
+                console.log("Temporary files cleaned up.");
+            })
+            .on('error', (error) => {
+                console.error("FFmpeg Error:", error);
+                replygcxeon("An error occurred while merging video and audio. Please try again.");
+            })
+            .run();
+    } catch (error) {
+        console.error("Error downloading video:", error);
+        replygcxeon("An error occurred while downloading the video. Please try again.");
     }
-
-    console.log("Both video and audio files are ready. Starting FFmpeg merge...");
-
-
-myFFmpeg(videoFile)
-  .input(audioFile)
-  .output(outputFile)
-  .videoCodec('copy') // Copy video codec directly to avoid re-encoding
-  .audioCodec('copy') // Copy audio codec if it's compatible (or use 'aac' if issues arise)
-  .on('start', (commandLine) => {
-    console.log("FFmpeg command:", commandLine); // Debug command used
-  })
-  .on('end', async () => {
-    console.log("FFmpeg merge complete.");
-
-    if (!fileSys.existsSync(outputFile)) {
-      console.error("FFmpeg failed to create the output file.");
-      replygcxeon("An error occurred while merging video and audio. Please try again.");
-      return;
-    }
-
-    const videoBuffer = fileSys.readFileSync(outputFile);
-    await XeonBotInc.sendMessage(m.chat, { 
-      video: videoBuffer,
-      mimeType: 'video/mp4',
-      caption: `Here is your video: ${videoTitle}`,
-    }, { quoted: m });
-
-    fileSys.unlinkSync(videoFile);
-    fileSys.unlinkSync(audioFile);
-    fileSys.unlinkSync(outputFile);
-    console.log("Temporary files cleaned up.");
-  })
-  .on('error', (error) => {
-    console.error("FFmpeg Error:", error);
-    replygcxeon("An error occurred while merging video and audio. Please try again.");
-  })
-  .run();
-  } catch (error) {
-    console.error("Error downloading video:", error);
-    replygcxeon("An error occurred while downloading the video. Please try again.");
-  }
-  break;
+    break;
 }
+
 break
 case 'ytsubtitle': {
   const url = text;
