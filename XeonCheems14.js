@@ -7492,19 +7492,17 @@ myFFmpeg.setFfmpegPath(ffmpegStatic);
        case 'ytdownload': {
     myFFmpeg.setFfmpegPath(ffmpegStatic);
 
-    // Set up proxy using the provided proxy details (IP:Port)
-const proxyUrl = 'http://44.218.183.55:80';  // Proxy IP and Port
-const agent = ytDownloader.createProxyAgent({ uri: proxyUrl });
+
     const url = text;
     if (!ytDownloader.validateURL(url)) return replygcxeon("Invalid YouTube URL. Please try again.");
 
     try {
-        const info = await ytDownloader.getInfo(url, { agent });
+        const info = await ytDownloader.getInfo(url);
         const videoTitle = info.videoDetails.title;
 
         // Set up separate streams for video and audio
-        const videoStream = ytDownloader(url, { quality: '135', agent }); // 480p video only
-        const audioStream = ytDownloader(url, { quality: '140', agent }); // audio only
+        const videoStream = ytDownloader(url, { quality: '135'); // 480p video only
+        const audioStream = ytDownloader(url, { quality: '140'); // audio only
 
         // Define temporary file paths in 'tmp/' directory
         const videoFile = './tmp/temp_video.mp4';
